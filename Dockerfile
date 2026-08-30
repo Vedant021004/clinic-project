@@ -35,7 +35,7 @@ RUN chmod +x start.sh
 # Environment Defaults for Railway
 ENV NODE_ENV=production
 ENV RAG_SERVICE_URL=http://127.0.0.1:8000
-ENV DATABASE_URL="file:/app/dev.db"
+ENV DATABASE_URL="file:./dev.db"
 ENV PYTHONPATH=/app/rag-service
 
 # Expose Web & API Port (8080 default on Railway)
