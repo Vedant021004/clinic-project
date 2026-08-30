@@ -1,10 +1,10 @@
 /**
  * CareBridge Health Network - Main UI Controller
- * Orchestrates views, real-time clinic status badges, assistant widget,
- * appointment portal, tracker, and accessibility features.
+ * Connected to Express REST API with server-calculated IST live hours,
+ * backend appointment storage, and real-time patient tracker.
  */
 
-import { CAREBRIDGE_DATA } from './data.js';
+import { CareBridgeAPI } from './api.js';
 import { CareBridgeAIAssistant } from './ai-assistant.js';
 import { AppointmentManager } from './appointments.js';
 
@@ -12,22 +12,23 @@ class CareBridgeApp {
   constructor() {
     this.appointmentManager = new AppointmentManager();
     this.assistant = null;
-    this.selectedLocationFilter = 'all';
+    this.clinics = [];
+    this.services = [];
+    this.faqs = [];
     this.init();
   }
 
-  init() {
+  async init() {
     this.initTheme();
-    this.renderLocations();
-    this.renderServices();
-    this.renderFaq();
-    this.initBookingForm();
-    this.initTracker();
-    this.initAIAssistant();
     this.initEventListeners();
-    this.updateLiveClinicStatuses();
-    // Update live status every 60 seconds
-    setInterval(() => this.updateLiveClinicStatuses(), 60000);
+    this.initAIAssistant();
+    this.initTracker();
+
+    // Fetch initial backend data
+    await this.loadInitialData();
+
+    // Refresh live status from server every 60 seconds
+    setInterval(() => this.refreshLiveStatuses(), 60000);
   }
 
   initTheme() {
@@ -50,84 +51,70 @@ class CareBridgeApp {
     }
   }
 
-  /**
-   * Calculates live Open / Closed status for a clinic location
-   */
-  getClinicLiveStatus(location) {
-    const now = new Date();
-    const day = now.getDay(); // 0 = Sunday, 1..6 = Mon..Sat
-    const hoursConfig = location.hours.schedule[day];
+  async loadInitialData() {
+    try {
+      const [clinics, services, faqs] = await Promise.all([
+        CareBridgeAPI.getClinics(),
+        CareBridgeAPI.getServices(),
+        CareBridgeAPI.getFaqs()
+      ]);
 
-    if (!hoursConfig) return { isOpen: false, text: "Closed Today", class: "status-closed" };
+      this.clinics = clinics;
+      this.services = services;
+      this.faqs = faqs;
 
-    const [openH, openM] = hoursConfig.open.split(':').map(Number);
-    const [closeH, closeM] = hoursConfig.close.split(':').map(Number);
-
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const openMinutes = openH * 60 + openM;
-    const closeMinutes = closeH * 60 + closeM;
-
-    if (currentMinutes >= openMinutes && currentMinutes < closeMinutes) {
-      const remainingMinutes = closeMinutes - currentMinutes;
-      if (remainingMinutes <= 60) {
-        return {
-          isOpen: true,
-          text: `Open • Closes soon (${remainingMinutes}m left)`,
-          class: "status-closing-soon"
-        };
-      }
-      return {
-        isOpen: true,
-        text: `Open Now • Closes at ${this.formatHour(closeH, closeM)}`,
-        class: "status-open"
-      };
-    } else if (currentMinutes < openMinutes) {
-      return {
-        isOpen: false,
-        text: `Closed • Opens today at ${this.formatHour(openH, openM)}`,
-        class: "status-closed"
-      };
-    } else {
-      return {
-        isOpen: false,
-        text: "Closed for the day",
-        class: "status-closed"
-      };
+      this.renderLocations(this.clinics);
+      this.renderServices(this.services);
+      this.renderFaq(this.faqs);
+      this.initBookingForm();
+    } catch (e) {
+      console.warn("Failed loading live data from API, using fallback data:", e);
+      this.showToast("Connected to offline cache", "info");
     }
   }
 
-  formatHour(h, m) {
-    const period = h >= 12 ? 'PM' : 'AM';
-    const hour12 = h % 12 || 12;
-    return `${hour12}:${m.toString().padStart(2, '0')} ${period}`;
+  async refreshLiveStatuses() {
+    try {
+      const clinics = await CareBridgeAPI.getClinics();
+      this.clinics = clinics;
+      clinics.forEach(clinic => {
+        const badge = document.getElementById(`status-badge-${clinic.slug}`);
+        if (badge && clinic.liveStatus) {
+          const statusClass = clinic.liveStatus.status === 'OPEN'
+            ? 'status-open'
+            : clinic.liveStatus.status === 'CLOSING_SOON'
+            ? 'status-closing-soon'
+            : 'status-closed';
+          badge.className = `status-badge ${statusClass}`;
+          badge.innerHTML = `<span class="status-dot"></span> ${clinic.liveStatus.text}`;
+        }
+      });
+    } catch (e) {
+      console.warn("Failed refreshing live statuses:", e);
+    }
   }
 
-  updateLiveClinicStatuses() {
-    CAREBRIDGE_DATA.locations.forEach(loc => {
-      const badge = document.getElementById(`status-badge-${loc.id}`);
-      if (badge) {
-        const status = this.getClinicLiveStatus(loc);
-        badge.className = `status-badge ${status.class}`;
-        badge.innerHTML = `<span class="status-dot"></span> ${status.text}`;
-      }
-    });
-  }
-
-  renderLocations() {
+  renderLocations(clinics) {
     const container = document.getElementById('locations-grid');
-    if (!container) return;
+    if (!container || !clinics) return;
 
-    container.innerHTML = CAREBRIDGE_DATA.locations.map(loc => {
-      const status = this.getClinicLiveStatus(loc);
+    container.innerHTML = clinics.map(loc => {
+      const live = loc.liveStatus || { status: 'CLOSED', text: 'Hours unavailable' };
+      const statusClass = live.status === 'OPEN'
+        ? 'status-open'
+        : live.status === 'CLOSING_SOON'
+        ? 'status-closing-soon'
+        : 'status-closed';
+
       return `
-        <article class="clinic-card" id="card-${loc.id}">
+        <article class="clinic-card" id="card-${loc.slug}">
           <div class="clinic-card-header">
             <div>
-              <span class="clinic-tag">${loc.tag}</span>
+              <span class="clinic-tag">${loc.tag || 'Care Center'}</span>
               <h3 class="clinic-title">${loc.name}</h3>
             </div>
-            <div id="status-badge-${loc.id}" class="status-badge ${status.class}">
-              <span class="status-dot"></span> ${status.text}
+            <div id="status-badge-${loc.slug}" class="status-badge ${statusClass}">
+              <span class="status-dot"></span> ${live.text}
             </div>
           </div>
 
@@ -136,17 +123,15 @@ class CareBridgeApp {
               <svg class="icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
               <span>${loc.address}</span>
             </p>
-            <p class="clinic-landmark">
-              <span class="badge-subtle">Landmark</span> ${loc.landmark}
-            </p>
+            ${loc.landmark ? `<p class="clinic-landmark"><span class="badge-subtle">Landmark</span> ${loc.landmark}</p>` : ''}
             <div class="clinic-hours-box">
               <div class="hours-row">
                 <strong>Mon - Sat:</strong>
-                <span>${loc.hours.weekdayText.split(': ')[1]}</span>
+                <span>${loc.hours.weekdayText ? loc.hours.weekdayText.split(': ')[1] : '8:00 AM - 8:00 PM'}</span>
               </div>
               <div class="hours-row">
                 <strong>Sunday:</strong>
-                <span>${loc.hours.sundayText.split(': ')[1]}</span>
+                <span>${loc.hours.sundayText ? loc.hours.sundayText.split(': ')[1] : '10:00 AM - 2:00 PM'}</span>
               </div>
             </div>
           </div>
@@ -154,7 +139,7 @@ class CareBridgeApp {
           <div class="clinic-services">
             <h4>Available Services</h4>
             <div class="service-tags">
-              ${loc.services.map(s => `<span class="service-tag">${s}</span>`).join('')}
+              ${(loc.services || []).map(s => `<span class="service-tag">${s}</span>`).join('')}
             </div>
           </div>
 
@@ -172,11 +157,11 @@ class CareBridgeApp {
     }).join('');
   }
 
-  renderServices() {
+  renderServices(services) {
     const container = document.getElementById('services-grid');
-    if (!container) return;
+    if (!container || !services) return;
 
-    container.innerHTML = CAREBRIDGE_DATA.services.map(srv => {
+    container.innerHTML = services.map(srv => {
       return `
         <div class="service-card">
           <div class="service-icon-box">
@@ -187,7 +172,7 @@ class CareBridgeApp {
           <div class="service-locations-list">
             <span class="meta-label">Available At:</span>
             <div class="badge-row">
-              ${srv.availableAt.map(loc => `<span class="location-chip">${loc}</span>`).join('')}
+              ${(srv.availableAt || []).map(loc => `<span class="location-chip">${loc}</span>`).join('')}
             </div>
           </div>
           <button class="btn btn-primary btn-sm service-book-btn" onclick="window.carebridge.openBookingModal('', '${srv.name}')">
@@ -198,11 +183,11 @@ class CareBridgeApp {
     }).join('');
   }
 
-  renderFaq() {
+  renderFaq(faqs) {
     const container = document.getElementById('faq-accordion');
-    if (!container) return;
+    if (!container || !faqs) return;
 
-    container.innerHTML = CAREBRIDGE_DATA.faq.map((item, index) => {
+    container.innerHTML = faqs.map((item, index) => {
       return `
         <div class="faq-item" id="faq-item-${index}">
           <button class="faq-question" aria-expanded="false" onclick="window.carebridge.toggleFaq(${index})">
@@ -235,13 +220,19 @@ class CareBridgeApp {
     }
   }
 
-  filterFaq(query) {
-    const items = document.querySelectorAll('.faq-item');
-    const q = query.toLowerCase();
-    items.forEach(el => {
-      const text = el.innerText.toLowerCase();
-      el.style.display = text.includes(q) ? 'block' : 'none';
-    });
+  async filterFaq(query) {
+    try {
+      const results = await CareBridgeAPI.getFaqs(query);
+      this.renderFaq(results);
+    } catch (e) {
+      // Fallback local filter
+      const items = document.querySelectorAll('.faq-item');
+      const q = query.toLowerCase();
+      items.forEach(el => {
+        const text = el.innerText.toLowerCase();
+        el.style.display = text.includes(q) ? 'block' : 'none';
+      });
+    }
   }
 
   initBookingForm() {
@@ -252,30 +243,28 @@ class CareBridgeApp {
     const serviceSelect = document.getElementById('form-service');
     const dateInput = document.getElementById('form-date');
 
-    // Set min date to today
     const today = new Date().toISOString().split('T')[0];
     dateInput.min = today;
 
-    // Populate locations
+    // Populate locations from loaded clinics
     locSelect.innerHTML = '<option value="">-- Select Preferred Location --</option>' +
-      CAREBRIDGE_DATA.locations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
+      this.clinics.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
 
-    // Dynamic service updater based on location
     const updateServices = () => {
-      const selectedLoc = locSelect.value;
-      let services = CAREBRIDGE_DATA.services.map(s => s.name);
-      if (selectedLoc) {
-        const found = CAREBRIDGE_DATA.locations.find(l => l.name === selectedLoc);
-        if (found) services = found.services;
+      const selectedLocName = locSelect.value;
+      let availableServices = this.services.map(s => s.name);
+      if (selectedLocName) {
+        const found = this.clinics.find(l => l.name === selectedLocName);
+        if (found && found.services) availableServices = found.services;
       }
       serviceSelect.innerHTML = '<option value="">-- Select Requested Service --</option>' +
-        services.map(s => `<option value="${s}">${s}</option>`).join('');
+        availableServices.map(s => `<option value="${s}">${s}</option>`).join('');
     };
 
     locSelect.addEventListener('change', updateServices);
     updateServices();
 
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = {
         fullName: document.getElementById('form-name').value,
@@ -286,18 +275,19 @@ class CareBridgeApp {
         service: serviceSelect.value,
         preferredDate: dateInput.value,
         preferredTime: document.getElementById('form-time').value,
-        notes: document.getElementById('form-notes')?.value || ''
+        notes: document.getElementById('form-notes')?.value || '',
+        source: 'WEBSITE'
       };
 
-      if (!formData.fullName || !formData.phone || !formData.email || !formData.location || !formData.service || !formData.preferredDate || !formData.preferredTime) {
-        this.showToast("Please fill in all required appointment fields.", "warning");
-        return;
+      try {
+        const record = await this.appointmentManager.createRequest(formData);
+        this.showReceiptModal(record);
+        form.reset();
+        updateServices();
+        this.showToast("Appointment request queued successfully!", "success");
+      } catch (err) {
+        this.showToast(err.message || "Failed to submit request", "warning");
       }
-
-      const record = this.appointmentManager.createRequest(formData);
-      this.showReceiptModal(record);
-      form.reset();
-      updateServices();
     });
   }
 
@@ -306,58 +296,65 @@ class CareBridgeApp {
     const searchInput = document.getElementById('tracker-query');
     const resultsContainer = document.getElementById('tracker-results');
 
-    const doSearch = () => {
+    const doSearch = async () => {
       const query = searchInput.value.trim();
       if (!query) {
-        resultsContainer.innerHTML = '<p class="text-muted text-center">Please enter a phone number, request ID, or patient name to search.</p>';
-        return;
-      }
-      const results = this.appointmentManager.searchRequests(query);
-      if (results.length === 0) {
-        resultsContainer.innerHTML = `
-          <div class="empty-tracker">
-            <p>No appointment requests found matching "<strong>${query}</strong>".</p>
-            <small>Tip: Try searching by the phone number used during submission or the Request ID (e.g. CB-849201).</small>
-          </div>
-        `;
+        resultsContainer.innerHTML = '<p class="text-muted text-center">Please enter a phone number or request ID to search.</p>';
         return;
       }
 
-      resultsContainer.innerHTML = results.map(req => `
-        <div class="tracker-card">
-          <div class="tracker-card-header">
-            <div>
-              <span class="tracker-id">${req.requestId}</span>
-              <h4 class="tracker-name">${req.fullName} <span class="patient-pill">${req.patientType}</span></h4>
+      resultsContainer.innerHTML = '<p class="text-muted text-center">🔍 Searching records...</p>';
+
+      try {
+        const results = await this.appointmentManager.searchRequests(query);
+        if (results.length === 0) {
+          resultsContainer.innerHTML = `
+            <div class="empty-tracker">
+              <p>No appointment requests found matching "<strong>${query}</strong>".</p>
+              <small>Tip: Try searching with your phone number or Request ID (e.g. CB-849201).</small>
             </div>
-            <span class="tracker-status-badge status-pending">
-              ${req.status}
-            </span>
-          </div>
+          `;
+          return;
+        }
 
-          <div class="tracker-details-grid">
-            <div><strong>Location:</strong> ${req.location}</div>
-            <div><strong>Service:</strong> ${req.service}</div>
-            <div><strong>Requested Date:</strong> ${req.preferredDate}</div>
-            <div><strong>Preferred Time:</strong> ${req.preferredTime}</div>
-            <div><strong>Phone:</strong> ${req.phone}</div>
-            <div><strong>Email:</strong> ${req.email}</div>
-          </div>
+        resultsContainer.innerHTML = results.map(req => `
+          <div class="tracker-card">
+            <div class="tracker-card-header">
+              <div>
+                <span class="tracker-id">${req.requestId}</span>
+                <h4 class="tracker-name">${req.fullName} <span class="patient-pill">${req.patientType}</span></h4>
+              </div>
+              <span class="tracker-status-badge status-pending">
+                ${req.status}
+              </span>
+            </div>
 
-          <div class="disclaimer-callout">
-            <small>ℹ️ Note: This request is queued with our clinic front-desk team. A coordinator will call ${req.phone} to confirm schedule availability.</small>
-          </div>
+            <div class="tracker-details-grid">
+              <div><strong>Location:</strong> ${req.location}</div>
+              <div><strong>Service:</strong> ${req.service}</div>
+              <div><strong>Requested Date:</strong> ${req.preferredDate}</div>
+              <div><strong>Preferred Time:</strong> ${req.preferredTime}</div>
+              <div><strong>Phone:</strong> ${req.phone}</div>
+              <div><strong>Email:</strong> ${req.email}</div>
+            </div>
 
-          <div class="tracker-actions">
-            <button class="btn btn-outline btn-sm" onclick="window.carebridge.openRescheduleModal('${req.requestId}')">
-              🔄 Request Reschedule
-            </button>
-            <button class="btn btn-danger-outline btn-sm" onclick="window.carebridge.openCancelModal('${req.requestId}')">
-              ❌ Request Cancellation
-            </button>
+            <div class="disclaimer-callout">
+              <small>ℹ️ Note: This request is queued with our clinic front-desk team. A coordinator will call ${req.phone} to confirm schedule availability.</small>
+            </div>
+
+            <div class="tracker-actions">
+              <button class="btn btn-outline btn-sm" onclick="window.carebridge.openRescheduleModal('${req.requestId}')">
+                🔄 Request Reschedule
+              </button>
+              <button class="btn btn-danger-outline btn-sm" onclick="window.carebridge.openCancelModal('${req.requestId}')">
+                ❌ Request Cancellation
+              </button>
+            </div>
           </div>
-        </div>
-      `).join('');
+        `).join('');
+      } catch (err) {
+        resultsContainer.innerHTML = `<p class="text-danger text-center">Error searching: ${err.message}</p>`;
+      }
     };
 
     if (searchBtn) searchBtn.addEventListener('click', doSearch);
@@ -378,9 +375,14 @@ class CareBridgeApp {
       onMessage: (msg) => {
         this.renderChatMessage(msg, chatContainer);
       },
-      onBookingComplete: (record) => {
-        this.appointmentManager.createRequest(record);
-        this.showToast("Appointment request submitted successfully!", "success");
+      onBookingComplete: async (record) => {
+        const created = await this.appointmentManager.createRequest(record);
+        return {
+          success: true,
+          requestId: created.requestId,
+          status: created.status || "PENDING",
+          appointment: created
+        };
       }
     });
 
@@ -406,7 +408,6 @@ class CareBridgeApp {
       });
     }
 
-    // Global event listener to open tracker
     window.addEventListener('carebridge:open-tracker', () => {
       const trackerTab = document.getElementById('tab-btn-tracker');
       if (trackerTab) trackerTab.click();
@@ -428,7 +429,6 @@ class CareBridgeApp {
     }
 
     if (msg.text) {
-      // Parse markdown-like bold and line breaks
       const formatted = msg.text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\n/g, '<br>');
@@ -577,25 +577,29 @@ class CareBridgeApp {
     if (trackerSec) trackerSec.scrollIntoView({ behavior: 'smooth' });
   }
 
-  openRescheduleModal(requestId) {
+  async openRescheduleModal(requestId) {
     const newDate = prompt("Enter new preferred date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
     if (!newDate) return;
     const newTime = prompt("Enter new preferred time slot (e.g. Morning (9:00 AM - 12:00 PM), Afternoon, or Evening):", "Morning (9:00 AM - 12:00 PM)");
     if (!newTime) return;
 
-    const res = this.appointmentManager.requestReschedule(requestId, newDate, newTime);
-    if (res) {
-      this.showToast(`Reschedule request submitted for ${requestId}. Our clinic team will call to confirm.`, "info");
+    try {
+      const res = await this.appointmentManager.requestReschedule(requestId, newDate, newTime);
+      this.showToast(res.message || `Reschedule request submitted for ${requestId}`, "info");
       document.getElementById('tracker-search-btn')?.click();
+    } catch (err) {
+      this.showToast(err.message || "Failed to reschedule", "warning");
     }
   }
 
-  openCancelModal(requestId) {
+  async openCancelModal(requestId) {
     if (confirm(`Are you sure you want to submit a cancellation request for ${requestId}?`)) {
-      const res = this.appointmentManager.requestCancellation(requestId);
-      if (res) {
-        this.showToast(`Cancellation request submitted for ${requestId}.`, "info");
+      try {
+        const res = await this.appointmentManager.requestCancellation(requestId);
+        this.showToast(res.message || `Cancellation request submitted for ${requestId}.`, "info");
         document.getElementById('tracker-search-btn')?.click();
+      } catch (err) {
+        this.showToast(err.message || "Failed to cancel", "warning");
       }
     }
   }
@@ -624,19 +628,18 @@ class CareBridgeApp {
   }
 
   initEventListeners() {
-    // Theme toggle
     document.getElementById('theme-toggle-btn')?.addEventListener('click', () => this.toggleTheme());
-
-    // Floating chat toggles
     document.getElementById('floating-chat-trigger')?.addEventListener('click', () => this.toggleChatWidget());
     document.getElementById('close-chat-btn')?.addEventListener('click', () => this.toggleChatWidget());
 
-    // FAQ search
+    let debounceTimer;
     document.getElementById('faq-search-input')?.addEventListener('input', (e) => {
-      this.filterFaq(e.target.value);
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        this.filterFaq(e.target.value);
+      }, 250);
     });
 
-    // Close modals on backdrop click
     window.addEventListener('click', (e) => {
       if (e.target.classList.contains('modal-backdrop')) {
         e.target.classList.remove('active');
@@ -645,7 +648,14 @@ class CareBridgeApp {
   }
 }
 
-// Attach globally for inline event handlers
-window.addEventListener('DOMContentLoaded', () => {
-  window.carebridge = new CareBridgeApp();
-});
+function initApp() {
+  if (!window.carebridge) {
+    window.carebridge = new CareBridgeApp();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}

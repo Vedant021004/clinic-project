@@ -304,14 +304,14 @@ window.retrySalesforce = async function() {
 };
 
 // Event Listeners setup
-document.addEventListener('DOMContentLoaded', () => {
+function initAdmin() {
   loadMetrics();
   loadAnalytics();
   loadAppointments();
 
   // Search input debounce
   let searchTimeout;
-  document.getElementById('filter-search').addEventListener('input', (e) => {
+  document.getElementById('filter-search')?.addEventListener('input', (e) => {
     clearTimeout(searchTimeout);
     searchTimeout = setTimeout(() => {
       state.search = e.target.value;
@@ -321,89 +321,90 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Filter dropdowns
-  document.getElementById('filter-location').addEventListener('change', (e) => {
+  document.getElementById('filter-location')?.addEventListener('change', (e) => {
     state.location = e.target.value;
     state.page = 1;
     loadAppointments();
   });
 
-  document.getElementById('filter-service').addEventListener('change', (e) => {
+  document.getElementById('filter-service')?.addEventListener('change', (e) => {
     state.service = e.target.value;
     state.page = 1;
     loadAppointments();
   });
 
-  document.getElementById('filter-patient-type').addEventListener('change', (e) => {
+  document.getElementById('filter-patient-type')?.addEventListener('change', (e) => {
     state.patientType = e.target.value;
     state.page = 1;
     loadAppointments();
   });
 
-  document.getElementById('filter-status').addEventListener('change', (e) => {
+  document.getElementById('filter-status')?.addEventListener('change', (e) => {
     state.status = e.target.value;
     state.page = 1;
     loadAppointments();
   });
 
-  document.getElementById('filter-temp').addEventListener('change', (e) => {
+  document.getElementById('filter-temp')?.addEventListener('change', (e) => {
     state.leadTemperature = e.target.value;
     state.page = 1;
     loadAppointments();
   });
 
-  document.getElementById('filter-sf-status').addEventListener('change', (e) => {
-    state.salesforceSyncStatus = e.target.value;
-    state.page = 1;
-    loadAppointments();
-  });
-
-  document.getElementById('filter-date').addEventListener('change', (e) => {
-    state.date = e.target.value;
-    state.page = 1;
-    loadAppointments();
-  });
-
-  // Reset Filters Button
-  document.getElementById('btn-reset').addEventListener('click', () => {
-    state.search = '';
-    state.location = '';
-    state.service = '';
-    state.patientType = '';
-    state.status = '';
-    state.leadTemperature = '';
-    state.salesforceSyncStatus = '';
-    state.date = '';
-    state.page = 1;
-
+  document.getElementById('btn-reset-filters')?.addEventListener('click', () => {
     document.getElementById('filter-search').value = '';
     document.getElementById('filter-location').value = '';
     document.getElementById('filter-service').value = '';
     document.getElementById('filter-patient-type').value = '';
     document.getElementById('filter-status').value = '';
     document.getElementById('filter-temp').value = '';
-    document.getElementById('filter-sf-status').value = '';
-    document.getElementById('filter-date').value = '';
+
+    state.search = '';
+    state.location = '';
+    state.service = '';
+    state.patientType = '';
+    state.status = '';
+    state.leadTemperature = '';
+    state.page = 1;
 
     loadAppointments();
   });
 
+  // Action buttons
+  document.getElementById('btn-refresh')?.addEventListener('click', () => {
+    loadMetrics();
+    loadAnalytics();
+    loadAppointments();
+  });
+
+  document.getElementById('btn-logout')?.addEventListener('click', () => {
+    sessionStorage.removeItem('carebridge_admin_token');
+    window.location.reload();
+  });
+
   // Pagination navigation
-  document.getElementById('btn-prev-page').addEventListener('click', () => {
+  document.getElementById('btn-prev-page')?.addEventListener('click', () => {
     if (state.page > 1) {
       state.page--;
       loadAppointments();
     }
   });
 
-  document.getElementById('btn-next-page').addEventListener('click', () => {
+  document.getElementById('btn-next-page')?.addEventListener('click', () => {
     state.page++;
     loadAppointments();
   });
 
   // Close modal on backdrop click
-  document.getElementById('modal-details').addEventListener('click', (e) => {
+  document.getElementById('modal-details')?.addEventListener('click', (e) => {
     if (e.target.id === 'modal-details') {
       window.closeModal();
     }
   });
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAdmin);
+} else {
+  initAdmin();
+}

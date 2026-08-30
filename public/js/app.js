@@ -648,6 +648,14 @@ class CareBridgeApp {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  window.carebridge = new CareBridgeApp();
-});
+function initApp() {
+  if (!window.carebridge) {
+    window.carebridge = new CareBridgeApp();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
