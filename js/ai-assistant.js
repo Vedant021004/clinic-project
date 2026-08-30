@@ -1,10 +1,11 @@
 /**
  * CareBridge Health Network - AI Patient Assistant Engine
  * Handles conversational intake, multi-step booking, new/existing patient flows,
- * emergency triaging, safety guardrails, and knowledge retrieval.
+ * emergency triaging, safety guardrails, and backend appointment submission.
  */
 
 import { CAREBRIDGE_DATA } from './data.js';
+import { CareBridgeAPI } from './api.js';
 
 export class CareBridgeAIAssistant {
   constructor(options = {}) {
@@ -55,7 +56,6 @@ export class CareBridgeAIAssistant {
     if (!this.speechEnabled || !('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.cancel();
-      // Strip markdown/html tags for clean voice output
       const cleanText = text.replace(/<[^>]*>?/gm, '').replace(/[*_#`]/g, '');
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.rate = 1.0;
@@ -99,172 +99,86 @@ export class CareBridgeAIAssistant {
 
     this.pushUserMessage(input);
 
-    // 1. Check for Critical Emergency Symptoms
-    if (this.isEmergency(input)) {
-      this.handleEmergencyResponse();
-      return;
+    if (!this.sessionId) {
+      this.sessionId = localStorage.getItem('carebridge_agent_session_id') || `session_${Date.now()}`;
+      localStorage.setItem('carebridge_agent_session_id', this.sessionId);
     }
 
-    // 2. Check for Medical Advice / Diagnosis / Prescriptions Guardrail
-    if (this.isMedicalAdviceRequest(input)) {
-      this.handleMedicalAdviceGuardrail();
-      return;
-    }
+    try {
+      // Query backend Agent Orchestrator
+      const res = await CareBridgeAPI.sendAIChat(input, this.sessionId);
 
-    // 3. Handle Active Booking Conversation State
-    if (this.bookingState.inProgress) {
-      this.handleBookingStep(input);
-      return;
-    }
+      if (res && (res.message || res.answer)) {
+        const responseText = res.message || res.answer;
+        let metaText = "";
+        
+        // 1. Sources formatting for RAG
+        if (res.sources && res.sources.length > 0) {
+          const docEntries = res.sources.map(s => `${s.document}${s.section ? ` (${s.section})` : ''}`);
+          const uniqueDocs = [...new Set(docEntries)].slice(0, 3).join(", ");
+          metaText = `📚 **Sources**: ${uniqueDocs}`;
+        }
 
-    // 4. Intent Classification & Knowledge Retrieval
-    const lower = input.toLowerCase();
+        // 2. Build contextual quick-reply chips
+        const chips = [];
+        if (res.intent === "EMERGENCY") {
+          chips.push({ label: "🚨 Dial 108 Immediately", action: "call_108" });
+          chips.push({ label: "📞 Support: +91 22 4000 1000", action: "call_support" });
+        } else if (res.intent === "MEDICAL_ADVICE") {
+          chips.push({ label: "📅 Book Doctor Consultation", action: "start_booking" });
+          chips.push({ label: "🩺 View Clinical Specialties", action: "show_services" });
+        } else if (res.appointment_state && res.appointment_state.active) {
+          if (res.appointment_state.step === 'AWAITING_CONFIRMATION') {
+            chips.push({ label: "✅ Yes, Submit Request", value: "Yes, please submit the request" });
+            chips.push({ label: "✏️ Change Details", value: "Change my details" });
+          } else if (!res.appointment_state.patientType) {
+            chips.push({ label: "New Patient", value: "New Patient" });
+            chips.push({ label: "Existing Patient", value: "Existing Patient" });
+          } else if (!res.appointment_state.location) {
+            chips.push({ label: "Palghar Central", value: "Palghar Central" });
+            chips.push({ label: "Boisar Care Center", value: "Boisar Care Center" });
+            chips.push({ label: "Vasai Care Center", value: "Vasai Care Center" });
+            chips.push({ label: "Nalasopara Care Center", value: "Nalasopara Care Center" });
+          } else if (!res.appointment_state.preferredTime) {
+            chips.push({ label: "🌅 Morning (9 AM - 12 PM)", value: "Morning" });
+            chips.push({ label: "☀️ Afternoon (1 PM - 4 PM)", value: "Afternoon" });
+            chips.push({ label: "🌆 Evening (5 PM - 8 PM)", value: "Evening" });
+          }
+        } else {
+          chips.push({ label: "📅 Book an Appointment", action: "start_booking" });
+          chips.push({ label: "📍 Clinic Locations", action: "show_locations" });
+          chips.push({ label: "🩺 Clinical Services", action: "show_services" });
+        }
 
-    // Trigger booking
-    if (
-      lower.includes("book") ||
-      lower.includes("appointment") ||
-      lower.includes("schedule a visit") ||
-      lower.includes("consultation request") ||
-      lower.includes("take appointment")
-    ) {
-      this.startBookingFlow();
-      return;
-    }
+        // 3. Render message
+        const msgObj = {
+          text: responseText,
+          meta: metaText,
+          chips: chips,
+          isAlert: res.intent === "EMERGENCY" || res.intent === "MEDICAL_ADVICE",
+          isSuccess: Boolean(res.appointment && res.appointment.requestId),
+          appointment: res.appointment || null
+        };
 
-    // New Patient
-    if (lower.includes("new patient") || lower.includes("first time") || lower.includes("new here")) {
-      this.handleNewPatientGreeting();
-      return;
-    }
+        this.pushBotMessage(msgObj);
 
-    // Existing Patient (Reschedule / Cancel / Lookup)
-    if (
-      lower.includes("existing patient") ||
-      lower.includes("reschedule") ||
-      lower.includes("cancel appointment") ||
-      lower.includes("change time") ||
-      lower.includes("already registered")
-    ) {
-      this.handleExistingPatientSupport(input);
-      return;
-    }
+        // 4. Trigger booking complete callback if appointment was created
+        if (res.appointment && res.appointment.requestId) {
+          this.onBookingComplete(res.appointment);
+        }
 
-    // Location / Hours inquiries
-    if (
-      lower.includes("location") ||
-      lower.includes("address") ||
-      lower.includes("hours") ||
-      lower.includes("timing") ||
-      lower.includes("open") ||
-      lower.includes("palghar") ||
-      lower.includes("boisar") ||
-      lower.includes("vasai") ||
-      lower.includes("nalasopara")
-    ) {
-      this.handleLocationQuery(lower);
-      return;
-    }
-
-    // Services inquiry
-    if (
-      lower.includes("service") ||
-      lower.includes("cardiology") ||
-      lower.includes("neurology") ||
-      lower.includes("pediatric") ||
-      lower.includes("women") ||
-      lower.includes("checkup") ||
-      lower.includes("diagnostics") ||
-      lower.includes("specialist")
-    ) {
-      this.handleServiceQuery(lower);
-      return;
-    }
-
-    // Walk-ins
-    if (lower.includes("walk in") || lower.includes("walk-in") || lower.includes("without appointment")) {
+        return;
+      }
+    } catch (err) {
+      console.warn("Agent chat fallback:", err.message);
       this.pushBotMessage({
-        text: "Walk-in availability may vary by location and service. Please contact your preferred clinic location before visiting without an appointment to check real-time doctor availability.",
+        text: "I'm having trouble connecting to the CareBridge assistant backend. Please try again in a moment or visit our appointment form directly.",
         chips: [
           { label: "Request Appointment", action: "start_booking" },
-          { label: "Call Support: +91 22 4000 1000", action: "call_support" }
+          { label: "Clinic Locations & Hours", action: "show_locations" }
         ]
       });
-      return;
     }
-
-    // Doctor choice
-    if (lower.includes("choose doctor") || lower.includes("which doctor") || lower.includes("doctor name")) {
-      this.pushBotMessage({
-        text: "Doctor availability depends on the selected specialty service and clinic location. Our clinic scheduling team will confirm available doctors when processing your appointment request.",
-        chips: [
-          { label: "Submit Request", action: "start_booking" },
-          { label: "View Locations", action: "show_locations" }
-        ]
-      });
-      return;
-    }
-
-    // Insurance inquiry
-    if (lower.includes("insurance") || lower.includes("tpa") || lower.includes("cashless") || lower.includes("mediclaim")) {
-      this.pushBotMessage({
-        text: "Insurance and cashless availability can vary by location, service, and insurer. We do not guarantee insurance coverage online. Please contact our clinic team directly at +91 22 4000 1000 to confirm your specific insurance policy eligibility.",
-        chips: [
-          { label: "Book Appointment", action: "start_booking" },
-          { label: "Contact Clinic", action: "contact_info" }
-        ]
-      });
-      return;
-    }
-
-    // Payment / Pricing inquiry
-    if (lower.includes("price") || lower.includes("cost") || lower.includes("fee") || lower.includes("charges") || lower.includes("payment")) {
-      this.pushBotMessage({
-        text: "Accepted payment methods and consultation costs may vary by service and clinic location. To ensure transparency, we do not estimate unverified rates. Our clinic team will provide you with the latest and exact pricing when confirming your visit.",
-        chips: [
-          { label: "Request Appointment", action: "start_booking" },
-          { label: "View Services", action: "show_services" }
-        ]
-      });
-      return;
-    }
-
-    // Contact info
-    if (lower.includes("contact") || lower.includes("phone") || lower.includes("call") || lower.includes("email")) {
-      this.pushBotMessage({
-        text: `You can reach CareBridge Health Network Patient Support by phone at **${CAREBRIDGE_DATA.network.phone}** or by email at **${CAREBRIDGE_DATA.network.email}** (demonstration contact details).`,
-        chips: [
-          { label: "Request an Appointment", action: "start_booking" },
-          { label: "Clinic Locations", action: "show_locations" }
-        ]
-      });
-      return;
-    }
-
-    // General FAQ or Fallback
-    const matchedFaq = this.findFaqMatch(lower);
-    if (matchedFaq) {
-      this.pushBotMessage({
-        text: matchedFaq.answer,
-        chips: [
-          { label: "Book Appointment", action: "start_booking" },
-          { label: "Ask Another Question", action: "faq_list" }
-        ]
-      });
-      return;
-    }
-
-    // General fallback
-    this.pushBotMessage({
-      text: "I am CareBridge's AI Patient Assistant. I can assist you with clinic hours, location details, appointment requests, services, or policies.",
-      meta: "Please note: I cannot provide medical diagnosis, treatment advice, or process sensitive medical records.",
-      chips: [
-        { label: "Request Appointment", action: "start_booking" },
-        { label: "Clinic Locations & Hours", action: "show_locations" },
-        { label: "Our Medical Services", action: "show_services" },
-        { label: "Frequently Asked Questions", action: "faq_list" }
-      ]
-    });
   }
 
   isEmergency(text) {
@@ -352,12 +266,13 @@ export class CareBridgeAIAssistant {
         location: '',
         service: '',
         preferredDate: '',
-        preferredTime: ''
+        preferredTime: '',
+        source: 'AI_ASSISTANT'
       }
     };
 
     if (initialPatientType) {
-      this.bookingState.stepIndex = 1; // skip patient type if pre-selected
+      this.bookingState.stepIndex = 1;
       this.askBookingStep(1);
     } else {
       this.askBookingStep(0);
@@ -366,7 +281,7 @@ export class CareBridgeAIAssistant {
 
   askBookingStep(stepIndex) {
     switch (stepIndex) {
-      case 0: // Patient Type
+      case 0:
         this.pushBotMessage({
           text: "Let's set up your appointment request! Are you a **New Patient** or an **Existing Patient**?",
           chips: [
@@ -376,28 +291,28 @@ export class CareBridgeAIAssistant {
         });
         break;
 
-      case 1: // Full Name
+      case 1:
         this.pushBotMessage({
           text: `Great! What is the **Full Name** of the patient?`,
           meta: "Please enter first and last name."
         });
         break;
 
-      case 2: // Phone
+      case 2:
         this.pushBotMessage({
           text: `Thank you, ${this.bookingState.data.fullName}. What is your **Phone Number**?`,
           meta: "Our clinic team will use this number to contact you and confirm your visit."
         });
         break;
 
-      case 3: // Email
+      case 3:
         this.pushBotMessage({
           text: "What is your **Email Address** for receiving the request summary?",
           meta: "e.g. name@example.com"
         });
         break;
 
-      case 4: // Location
+      case 4:
         this.pushBotMessage({
           text: "Which **CareBridge Location** would you prefer?",
           chips: CAREBRIDGE_DATA.locations.map(loc => ({
@@ -407,7 +322,7 @@ export class CareBridgeAIAssistant {
         });
         break;
 
-      case 5: // Service
+      case 5:
         const selectedLoc = CAREBRIDGE_DATA.locations.find(
           l => l.name.toLowerCase() === (this.bookingState.data.location || '').toLowerCase()
         );
@@ -424,7 +339,7 @@ export class CareBridgeAIAssistant {
         });
         break;
 
-      case 6: // Preferred Date
+      case 6:
         const today = new Date();
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
@@ -444,7 +359,7 @@ export class CareBridgeAIAssistant {
         });
         break;
 
-      case 7: // Preferred Time
+      case 7:
         this.pushBotMessage({
           text: "What **Time Slot** works best for you?",
           chips: [
@@ -462,7 +377,7 @@ export class CareBridgeAIAssistant {
     const step = state.stepIndex;
 
     switch (step) {
-      case 0: // Patient Type
+      case 0:
         if (input.toLowerCase().includes("new")) {
           state.data.patientType = "New Patient";
         } else if (input.toLowerCase().includes("exist")) {
@@ -474,7 +389,7 @@ export class CareBridgeAIAssistant {
         this.askBookingStep(1);
         break;
 
-      case 1: // Full Name
+      case 1:
         if (input.length < 2) {
           this.pushBotMessage({
             text: "Please provide a valid full name (at least 2 characters):"
@@ -486,7 +401,7 @@ export class CareBridgeAIAssistant {
         this.askBookingStep(2);
         break;
 
-      case 2: // Phone
+      case 2:
         const cleanPhone = input.replace(/[^0-9+]/g, '');
         if (cleanPhone.length < 7) {
           this.pushBotMessage({
@@ -499,7 +414,7 @@ export class CareBridgeAIAssistant {
         this.askBookingStep(3);
         break;
 
-      case 3: // Email
+      case 3:
         if (!input.includes('@') || !input.includes('.')) {
           this.pushBotMessage({
             text: "Please enter a valid email address (e.g., patient@example.com):"
@@ -511,70 +426,77 @@ export class CareBridgeAIAssistant {
         this.askBookingStep(4);
         break;
 
-      case 4: // Location
+      case 4:
         const matchedLoc = CAREBRIDGE_DATA.locations.find(
           l => l.name.toLowerCase().includes(input.toLowerCase()) || input.toLowerCase().includes(l.id)
         );
-        if (matchedLoc) {
-          state.data.location = matchedLoc.name;
-        } else {
-          state.data.location = input;
-        }
+        state.data.location = matchedLoc ? matchedLoc.name : input;
         state.stepIndex = 5;
         this.askBookingStep(5);
         break;
 
-      case 5: // Service
+      case 5:
         const matchedService = CAREBRIDGE_DATA.services.find(
-          s => s.name.toLowerCase().includes(input.toLowerCase()) || input.toLowerCase().includes(s.name.toLowerCase())
+          s => s.name.toLowerCase().includes(input.toLowerCase()) || input.toLowerCase().includes(s.slug || '')
         );
         state.data.service = matchedService ? matchedService.name : input;
         state.stepIndex = 6;
         this.askBookingStep(6);
         break;
 
-      case 6: // Date
+      case 6:
         state.data.preferredDate = input;
         state.stepIndex = 7;
         this.askBookingStep(7);
         break;
 
-      case 7: // Time
+      case 7:
         state.data.preferredTime = input;
         this.completeBookingFlow();
         break;
     }
   }
 
-  completeBookingFlow() {
+  async completeBookingFlow() {
     const finalData = { ...this.bookingState.data };
-    const requestId = 'CB-' + Math.floor(100000 + Math.random() * 900000);
-
-    const appointmentRecord = {
-      requestId: requestId,
-      ...finalData,
-      status: 'Request Submitted (Pending Clinic Confirmation)',
-      createdAt: new Date().toISOString()
-    };
-
     this.bookingState.inProgress = false;
 
-    // Trigger appointment callback to persist and update UI
-    this.onBookingComplete(appointmentRecord);
+    try {
+      this.pushBotMessage({
+        text: "⏳ Submitting your appointment request to the CareBridge scheduling system..."
+      });
 
-    // Render receipt and mandatory disclaimer
-    this.pushBotMessage({
-      type: 'appointment_submitted',
-      isSuccess: true,
-      text: "✅ **Your appointment request has been submitted. Our clinic team will contact you to confirm the appointment.**",
-      appointment: appointmentRecord,
-      meta: "Important: This is a request submission, not a final confirmation. Availability will be verified by the clinic scheduling team.",
-      chips: [
-        { label: "Track Request Status", action: "track_request" },
-        { label: "View Clinic Hours", action: "show_locations" },
-        { label: "Done", action: "reset_chat" }
-      ]
-    });
+      const response = await this.onBookingComplete(finalData);
+
+      const appointmentRecord = response.appointment || {
+        requestId: response.requestId || "CB-" + Math.floor(100000 + Math.random() * 900000),
+        ...finalData,
+        status: response.status || "PENDING"
+      };
+
+      this.pushBotMessage({
+        type: 'appointment_submitted',
+        isSuccess: true,
+        text: "✅ **Your appointment request has been submitted. Our clinic team will contact you to confirm the appointment.**",
+        appointment: appointmentRecord,
+        meta: "Important: This is a request submission, not a final confirmation. Availability will be verified by the clinic scheduling team.",
+        chips: [
+          { label: "Track Request Status", action: "track_request" },
+          { label: "View Clinic Hours", action: "show_locations" },
+          { label: "Done", action: "reset_chat" }
+        ]
+      });
+    } catch (err) {
+      this.pushBotMessage({
+        isAlert: true,
+        alertLevel: 'warning',
+        text: `⚠️ **Unable to submit request**: ${err.message || 'Please check your inputs and try again.'}`,
+        chips: [
+          { label: "Try Again", action: "start_booking" },
+          { label: "Call Support", action: "call_support" }
+        ]
+      });
+    }
   }
 
   handleLocationQuery(lower) {
@@ -622,7 +544,7 @@ export class CareBridgeAIAssistant {
 
   handleServiceQuery(lower) {
     const matched = CAREBRIDGE_DATA.services.filter(
-      s => lower.includes(s.name.toLowerCase()) || lower.includes(s.id)
+      s => lower.includes(s.name.toLowerCase()) || lower.includes(s.slug || '')
     );
 
     if (matched.length > 0) {
@@ -650,14 +572,6 @@ export class CareBridgeAIAssistant {
         ]
       });
     }
-  }
-
-  findFaqMatch(query) {
-    return CAREBRIDGE_DATA.faq.find(f => {
-      const qWords = f.question.toLowerCase().split(' ').filter(w => w.length > 3);
-      const matches = qWords.filter(w => query.includes(w));
-      return matches.length >= 2;
-    });
   }
 
   handleChipAction(action, value) {
@@ -723,7 +637,6 @@ export class CareBridgeAIAssistant {
         ]
       });
     } else if (action === 'track_request') {
-      // Scroll to tracker section or trigger event
       window.dispatchEvent(new CustomEvent('carebridge:open-tracker'));
       this.pushBotMessage({
         text: "You can track and manage your request in our **Patient Self-Service Tracker** section on this page.",

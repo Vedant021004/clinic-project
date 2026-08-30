@@ -181,19 +181,6 @@ export class CareBridgeAIAssistant {
     }
   }
 
-    // Fallback response if offline
-    this.pushBotMessage({
-      text: "I am CareBridge's AI Patient Assistant. I can assist you with clinic hours, location details, appointment requests, services, or policies.",
-      meta: "Please note: I cannot provide medical diagnosis, treatment advice, or process sensitive medical records.",
-      chips: [
-        { label: "Request Appointment", action: "start_booking" },
-        { label: "Clinic Locations & Hours", action: "show_locations" },
-        { label: "Our Medical Services", action: "show_services" },
-        { label: "Frequently Asked Questions", action: "faq_list" }
-      ]
-    });
-  }
-
   isEmergency(text) {
     const lower = text.toLowerCase();
     return CAREBRIDGE_DATA.safetyKeywords.emergency.some(k => lower.includes(k));
