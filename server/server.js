@@ -38,7 +38,13 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (e.g. mobile apps, curl, same-origin)
     if (!origin) return callback(null, true);
-    if (!isProduction || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+    if (
+      !isProduction ||
+      allowedOrigins.includes(origin) ||
+      allowedOrigins.includes('*') ||
+      origin.endsWith('.railway.app') ||
+      origin.endsWith('.up.railway.app')
+    ) {
       return callback(null, true);
     }
     return callback(new Error(`CORS policy violation: Origin '${origin}' is not allowed.`));

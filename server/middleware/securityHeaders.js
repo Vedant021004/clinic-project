@@ -13,7 +13,7 @@ export function securityHeaders(req, res, next) {
     "style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; " +
     "script-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: https:; " +
-    "connect-src 'self' http://localhost:5000 http://localhost:8000; " +
+    "connect-src 'self' https: http://localhost:5000 http://localhost:8000; " +
     "frame-ancestors 'self'; " +
     "base-uri 'self'; " +
     "form-action 'self';"
