@@ -97,23 +97,12 @@ app.get('*', (req, res) => {
 // Centralized error handler
 app.use(errorHandler);
 
-const primaryPort = parseInt(process.env.PORT, 10) || 8080;
-const portsToListen = Array.from(new Set([primaryPort, 8080, 5000].filter(p => !isNaN(p) && p > 0)));
+const port = parseInt(process.env.PORT, 10) || 8080;
 
-portsToListen.forEach((p) => {
-  try {
-    const srv = app.listen(p, '0.0.0.0', () => {
-      console.log(`🚀 CareBridge Health Network Server running on http://0.0.0.0:${p}`);
-      console.log(`🏥 Health check available at: http://0.0.0.0:${p}/health`);
-    });
-    srv.on('error', (err) => {
-      if (err.code !== 'EADDRINUSE') {
-        console.warn(`[PORT_BIND] Warning on port ${p}:`, err.message);
-      }
-    });
-  } catch (err) {
-    // Port might be in use if multiple entries match
-  }
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`🚀 CareBridge Health Network Server running on port ${port}`);
+  console.log(`🏥 Health check available at: http://0.0.0.0:${port}/health`);
+  console.log(`📁 Serving frontend from: ${publicDirectory}`);
 });
 
 export default app;
