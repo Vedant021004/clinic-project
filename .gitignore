@@ -18,6 +18,8 @@ env/
 *.db-journal
 dev.db
 dev.db-journal
+data/sessions.json
+
 
 # Logs & Temp
 logs/
