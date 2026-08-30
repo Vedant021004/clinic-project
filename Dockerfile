@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir -r rag-service/requirements.txt
 # 2. Install Node.js dependencies & Prisma Client
 COPY package*.json ./
 COPY prisma ./prisma/
-RUN npm ci
+RUN npm install
 RUN npx prisma generate
 
 # 3. Copy application codebase
