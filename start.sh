@@ -20,5 +20,5 @@ cd /app
 sleep 3
 
 # 3. Start Node.js Express Server on assigned $PORT
-echo "🌐 Starting CareBridge API & Web Platform on port ${PORT:-5000}..."
+echo "🌐 Starting CareBridge API & Web Platform on port ${PORT:-8080}..."
 exec node server/server.js

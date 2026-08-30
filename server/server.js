@@ -97,9 +97,11 @@ app.get('*', (req, res) => {
 // Centralized error handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`🚀 CareBridge Health Network Server running on http://localhost:${PORT}`);
-  console.log(`🏥 Health check available at: http://localhost:${PORT}/health`);
+const serverPort = parseInt(process.env.PORT, 10) || 8080;
+
+app.listen(serverPort, '0.0.0.0', () => {
+  console.log(`🚀 CareBridge Health Network Server running on port ${serverPort}`);
+  console.log(`🏥 Health check available at: http://0.0.0.0:${serverPort}/health`);
   console.log(`📁 Serving frontend from: ${publicDirectory}`);
 });
 
