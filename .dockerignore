@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+Thumbs.db
+__pycache__
+*.pyc
+.venv
+dist
+coverage

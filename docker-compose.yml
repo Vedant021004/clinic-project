@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # Python FastAPI Advanced RAG Microservice
+  # ==========================================
+  carebridge-rag:
+    build:
+      context: ./rag-service
+      dockerfile: Dockerfile
+    container_name: carebridge-rag
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - RAG_MODE=advanced
+      - EMBEDDING_PROVIDER=semantic_dense
+      - LLAMA_CLOUD_API_KEY=${LLAMA_CLOUD_API_KEY:-}
+    volumes:
+      - ./data:/app/data
+    networks:
+      - carebridge-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ==========================================
+  # Node.js / Express Healthcare Platform API
+  # ==========================================
+  carebridge-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: carebridge-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    depends_on:
+      carebridge-rag:
+        condition: service_healthy
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/dev.db
+      - RAG_SERVICE_URL=http://carebridge-rag:8000
+      - FRONTEND_URL=http://localhost:5000
+      - TIMEZONE=Asia/Kolkata
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-carebridge_admin_secret_key_2026}
+      - SALESFORCE_MODE=${SALESFORCE_MODE:-mock}
+      - SALESFORCE_LOGIN_URL=${SALESFORCE_LOGIN_URL:-https://login.salesforce.com}
+      - SALESFORCE_CLIENT_ID=${SALESFORCE_CLIENT_ID:-}
+      - SALESFORCE_CLIENT_SECRET=${SALESFORCE_CLIENT_SECRET:-}
+      - SALESFORCE_USERNAME=${SALESFORCE_USERNAME:-}
+      - SALESFORCE_PASSWORD=${SALESFORCE_PASSWORD:-}
+      - SALESFORCE_SECURITY_TOKEN=${SALESFORCE_SECURITY_TOKEN:-}
+    volumes:
+      - ./dev.db:/app/dev.db
+      - ./data:/app/data
+    networks:
+      - carebridge-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+networks:
+  carebridge-network:
+    driver: bridge

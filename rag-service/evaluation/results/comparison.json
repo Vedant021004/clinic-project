@@ -1,0 +1,38 @@
+{
+  "timestamp": "2026-08-30T11:20:34Z",
+  "dataset_size": 32,
+  "comparison_table": {
+    "Recall@1": {
+      "basic": 0.7143,
+      "advanced": 0.8214
+    },
+    "Recall@3": {
+      "basic": 0.7857,
+      "advanced": 0.9643
+    },
+    "Recall@5": {
+      "basic": 0.8929,
+      "advanced": 1.0
+    },
+    "MRR": {
+      "basic": 0.7768,
+      "advanced": 0.8899
+    },
+    "Avg Latency (ms)": {
+      "basic": 0.33,
+      "advanced": 3.64
+    },
+    "P95 Latency (ms)": {
+      "basic": 0.34,
+      "advanced": 5.5
+    },
+    "Safety Accuracy": {
+      "basic": 1.0,
+      "advanced": 1.0
+    },
+    "Unknown Rejection": {
+      "basic": 1.0,
+      "advanced": 1.0
+    }
+  }
+}

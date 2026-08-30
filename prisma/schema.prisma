@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum PatientType {
+  NEW
+  EXISTING
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  RESCHEDULE_REQUESTED
+  COMPLETED
+}
+
+enum LeadTemperature {
+  HOT
+  WARM
+  COLD
+}
+
+enum RequestSource {
+  TARS_AI_AGENT
+  WEBSITE
+  AI_ASSISTANT
+}
+
+model Clinic {
+  id           String          @id @default(uuid())
+  name         String
+  slug         String          @unique
+  address      String
+  city         String          @default("Palghar")
+  state        String          @default("Maharashtra")
+  pincode      String
+  phone        String
+  landmark     String?
+  tag          String?
+  openingHours String // JSON string storing weekday and Sunday schedule
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  services     ClinicService[]
+  appointments AppointmentRequest[]
+}
+
+model Service {
+  id           String          @id @default(uuid())
+  name         String
+  slug         String          @unique
+  description  String
+  icon         String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  clinics      ClinicService[]
+  appointments AppointmentRequest[]
+}
+
+model ClinicService {
+  id        String   @id @default(uuid())
+  clinicId  String
+  serviceId String
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, serviceId])
+}
+
+model FAQItem {
+  id        String   @id @default(uuid())
+  question  String
+  answer    String
+  category  String   @default("General")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Patient {
+  id           String               @id @default(uuid())
+  fullName     String
+  email        String
+  phone        String
+  patientType  PatientType          @default(NEW)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  appointments AppointmentRequest[]
+
+  @@index([phone])
+  @@index([email])
+}
+
+model AppointmentRequest {
+  id                   String            @id @default(uuid())
+  requestId            String            @unique // e.g. CB-849201
+  patientId            String
+  clinicId             String
+  serviceId            String
+  preferredDate        String
+  preferredTime        String
+  status               AppointmentStatus @default(PENDING)
+  leadTemperature      LeadTemperature   @default(WARM)
+  source               RequestSource     @default(WEBSITE)
+  notes                String?
+  cancellationReason   String?
+  
+  // Salesforce CRM Synchronization Fields
+  salesforceLeadId     String?
+  salesforceTaskId     String?
+  salesforceSyncStatus String            @default("PENDING") // PENDING, SYNCED, FAILED
+  salesforceLastError  String?
+  salesforceSyncedAt   DateTime?
+
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  clinic  Clinic  @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+  @@index([patientId])
+  @@index([clinicId])
+  @@index([serviceId])
+  @@index([status])
+  @@index([salesforceSyncStatus])
+}

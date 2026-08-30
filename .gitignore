@@ -1,0 +1,29 @@
+# Environment Variables
+.env
+.env.*
+*.env
+**/.env
+**/.env.*
+
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Database & Persistent Data
+*.db
+*.db-journal
+dev.db
+dev.db-journal
+
+# Logs & Temp
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db

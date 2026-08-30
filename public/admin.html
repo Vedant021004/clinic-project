@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareBridge Health Network — Admin Operations Dashboard</title>
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <div class="admin-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">CB</div>
+        <div>
+          <div class="sidebar-title">CareBridge</div>
+          <div class="sidebar-badge">Operations CRM</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-item active">
+          <span>📊</span> Operations Overview
+        </div>
+        <a href="#table-section" class="nav-item">
+          <span>📅</span> Appointments
+        </a>
+        <a href="#analytics-section" class="nav-item">
+          <span>🏥</span> Clinic Performance
+        </a>
+        <a href="/" target="_blank" class="nav-item">
+          <span>🌐</span> Live Patient Website ↗
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div>CareBridge Health v2.0</div>
+        <div>Palghar • Boisar • Vasai • Nalasopara</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="admin-main">
+      <!-- Topbar -->
+      <header class="admin-topbar">
+        <div class="topbar-left">
+          <h1 class="page-heading">Operations & Clinical Intake Dashboard</h1>
+        </div>
+        <div class="topbar-right">
+          <button class="btn-sync-all" onclick="window.location.reload()">
+            <span>🔄</span> Refresh Data
+          </button>
+        </div>
+      </header>
+
+      <div class="admin-container">
+        <!-- KPI Cards Grid -->
+        <section class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-title">Total Requests</div>
+            <div class="kpi-value" id="kpi-total">--</div>
+            <div class="kpi-trend">All locations</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Pending Triage</div>
+            <div class="kpi-value" id="kpi-pending" style="color: var(--warning);">--</div>
+            <div class="kpi-trend warm">Requires review</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Confirmed</div>
+            <div class="kpi-value" id="kpi-confirmed" style="color: var(--success);">--</div>
+            <div class="kpi-trend synced">Scheduled</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Hot Leads</div>
+            <div class="kpi-value" id="kpi-hot" style="color: var(--hot);">--</div>
+            <div class="kpi-trend hot">🔥 High Priority</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Warm Leads</div>
+            <div class="kpi-value" id="kpi-warm" style="color: var(--warm);">--</div>
+            <div class="kpi-trend warm">⚡ Medium</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Cold Leads</div>
+            <div class="kpi-value" id="kpi-cold" style="color: var(--cold);">--</div>
+            <div class="kpi-trend cold">❄️ Inquiries</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Salesforce Synced</div>
+            <div class="kpi-value" id="kpi-synced" style="color: var(--success);">--</div>
+            <div class="kpi-trend synced">✓ CRM Leads & Tasks</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title">Sync Failures</div>
+            <div class="kpi-value" id="kpi-failed" style="color: var(--danger);">--</div>
+            <div class="kpi-trend failed">⚠️ Action needed</div>
+          </div>
+        </section>
+
+        <!-- Clinic & Service Analytics Grid -->
+        <section class="analytics-grid" id="analytics-section">
+          <!-- Locations Overview -->
+          <div class="panel-card">
+            <div class="panel-header">
+              <h2 class="panel-title">🏥 Clinic Locations Overview</h2>
+            </div>
+            <div class="analytics-list" id="analytics-locations-list">
+              <div style="color: var(--text-subtle);">Loading locations performance...</div>
+            </div>
+          </div>
+
+          <!-- Services Overview -->
+          <div class="panel-card">
+            <div class="panel-header">
+              <h2 class="panel-title">🩺 Clinical Services Demand</h2>
+            </div>
+            <div class="analytics-list" id="analytics-services-list">
+              <div style="color: var(--text-subtle);">Loading service demand...</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Filter Bar -->
+        <section class="filter-bar">
+          <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="filter-search" class="search-input" placeholder="Search by Request ID, Patient Name, Phone, Email...">
+          </div>
+
+          <select id="filter-location" class="filter-select">
+            <option value="">All Locations</option>
+            <option value="Palghar Central">Palghar Central</option>
+            <option value="Boisar Care Center">Boisar Care Center</option>
+            <option value="Vasai Care Center">Vasai Care Center</option>
+            <option value="Nalasopara Care Center">Nalasopara Care Center</option>
+          </select>
+
+          <select id="filter-service" class="filter-select">
+            <option value="">All Services</option>
+            <option value="Cardiology">Cardiology</option>
+            <option value="Neurology">Neurology</option>
+            <option value="Pediatrics">Pediatrics</option>
+            <option value="Women's Health">Women's Health</option>
+            <option value="General Medicine">General Medicine</option>
+            <option value="Preventive Health Checkups">Preventive Health</option>
+            <option value="Diagnostics & Basic Diagnostics">Diagnostics</option>
+          </select>
+
+          <select id="filter-patient-type" class="filter-select">
+            <option value="">All Patient Types</option>
+            <option value="NEW">New Patient</option>
+            <option value="EXISTING">Existing Patient</option>
+          </select>
+
+          <select id="filter-status" class="filter-select">
+            <option value="">All Statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="RESCHEDULE_REQUESTED">Reschedule Requested</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+
+          <select id="filter-temp" class="filter-select">
+            <option value="">All Temperatures</option>
+            <option value="HOT">Hot Lead</option>
+            <option value="WARM">Warm Lead</option>
+            <option value="COLD">Cold Lead</option>
+          </select>
+
+          <select id="filter-sf-status" class="filter-select">
+            <option value="">All Salesforce Status</option>
+            <option value="SYNCED">Synced</option>
+            <option value="FAILED">Failed</option>
+            <option value="PENDING">Pending Sync</option>
+          </select>
+
+          <input type="date" id="filter-date" class="filter-select" title="Filter by Preferred Date">
+
+          <button id="btn-reset" class="btn-reset-filters">Reset Filters</button>
+        </section>
+
+        <!-- Appointments Table Section -->
+        <section class="table-section" id="table-section">
+          <div class="table-wrapper">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Request ID</th>
+                  <th>Patient & Phone</th>
+                  <th>Type</th>
+                  <th>Service</th>
+                  <th>Location</th>
+                  <th>Preferred Slot</th>
+                  <th>Status</th>
+                  <th>Lead Temp</th>
+                  <th>Salesforce CRM</th>
+                  <th>Created</th>
+                </tr>
+              </thead>
+              <tbody id="appointments-tbody">
+                <tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 30px;">Loading appointments...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Bar -->
+          <div class="pagination-bar">
+            <div id="pagination-summary">Showing 0 of 0 records</div>
+            <div class="pagination-controls">
+              <button id="btn-prev-page" class="btn-page" disabled>Previous</button>
+              <button id="btn-next-page" class="btn-page" disabled>Next</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Detailed Appointment Modal / Drawer -->
+  <div id="modal-details" class="modal-backdrop">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div>
+          <span style="font-size: 11px; text-transform: uppercase; color: var(--primary); font-weight: 700;">Appointment Details</span>
+          <h3 class="modal-title" id="modal-req-id">CB-XXXXXX</h3>
+        </div>
+        <button class="btn-close" onclick="closeModal()">×</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Patient Information Section -->
+        <div class="detail-section">
+          <div class="detail-section-title">👤 Patient Contact & Profile</div>
+          <div class="detail-grid">
+            <div class="detail-field">
+              <div class="detail-label">Full Name</div>
+              <div class="detail-value" id="modal-patient-name">--</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Patient Type</div>
+              <div class="detail-value" id="modal-patient-type">--</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Phone Number</div>
+              <div class="detail-value" id="modal-patient-phone">--</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Email Address</div>
+              <div class="detail-value" id="modal-patient-email">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Appointment Specs Section -->
+        <div class="detail-section">
+          <div class="detail-section-title">🏥 Clinical Request & Scheduling</div>
+          <div class="detail-grid">
+            <div class="detail-field">
+              <div class="detail-label">Care Center Location</div>
+              <div class="detail-value" id="modal-location">--</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Clinical Specialty / Service</div>
+              <div class="detail-value" id="modal-service">--</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Preferred Date</div>
+              <div class="detail-value" id="modal-date">--</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Preferred Time Slot</div>
+              <div class="detail-value" id="modal-time">--</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Appointment Status</div>
+              <div id="modal-status-badge">--</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Lead Temperature</div>
+              <div id="modal-temp-badge">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Salesforce CRM Status Section -->
+        <div class="detail-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div class="detail-section-title" style="margin-bottom: 0;">☁️ Salesforce CRM Synchronization</div>
+            <button class="btn-action btn-retry-sf" onclick="retrySalesforce()">🔄 Retry Salesforce Sync</button>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-field">
+              <div class="detail-label">Sync Status</div>
+              <div id="modal-sf-status">--</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Salesforce Lead ID</div>
+              <div class="detail-value" id="modal-sf-lead-id">--</div>
+            </div>
+            <div class="detail-field">
+              <div class="detail-label">Salesforce Task ID</div>
+              <div class="detail-value" id="modal-sf-task-id">--</div>
+            </div>
+          </div>
+          <div id="modal-sf-error-box" style="display: none; margin-top: 10px; padding: 10px; background: rgba(239, 68, 68, 0.1); border-left: 3px solid var(--danger); font-size: 12px; color: #FCA5A5;">
+            <strong>Sync Error:</strong> <span id="modal-sf-error-text">--</span>
+          </div>
+        </div>
+
+        <!-- Sanitized Conversation Context -->
+        <div class="detail-section">
+          <div class="detail-section-title">💬 Conversational Intake Transcript (Sanitized)</div>
+          <div class="chat-transcript-box" id="modal-chat-history">
+            <div>Loading transcript...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="modal-footer">
+        <div style="font-size: 12px; color: var(--text-subtle);">Staff Actions:</div>
+        <div class="action-buttons">
+          <button class="btn-action btn-confirm" onclick="updateStatus('CONFIRMED')">✓ Confirm Appointment</button>
+          <button class="btn-action btn-complete" onclick="updateStatus('COMPLETED')">✓ Mark Completed</button>
+          <button class="btn-action btn-cancel" onclick="updateStatus('CANCELLED')">✗ Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>

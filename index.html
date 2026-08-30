@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareBridge Health Network | Multi-Location Healthcare in Palghar, Boisar, Vasai & Nalasopara</title>
+  <meta name="description" content="CareBridge Health Network provides accessible, quality healthcare across Palghar, Boisar, Vasai, and Nalasopara. Request appointments, explore clinic hours, and chat with our AI Patient Assistant.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- 1. Emergency Top Ribbon -->
+  <div class="emergency-ribbon" role="alert">
+    <span class="emergency-icon">🚨</span>
+    <span><strong>Medical Emergency?</strong> If you have life-threatening symptoms, dial <a href="tel:108">108</a> immediately or contact <a href="tel:912240001000">+91 22 4000 1000</a>.</span>
+  </div>
+
+  <!-- 2. Header & Navigation -->
+  <header class="header" role="banner">
+    <div class="container nav-container">
+      <a href="#hero" class="brand" aria-label="CareBridge Health Network Home">
+        <div class="brand-logo-icon">➕</div>
+        <div class="brand-text-block">
+          <span class="brand-name">CareBridge</span>
+          <span class="brand-region">Health Network • Maharashtra</span>
+        </div>
+      </a>
+
+      <nav class="nav-links" role="navigation" aria-label="Main Navigation">
+        <a href="#locations" class="nav-link">Locations & Hours</a>
+        <a href="#services" class="nav-link">Clinical Services</a>
+        <a href="#booking-portal" class="nav-link">Request Appointment</a>
+        <a href="#tracker-section" class="nav-link" id="tab-btn-tracker">Existing Patients</a>
+        <a href="#faq" class="nav-link">FAQ & Policies</a>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="btn btn-ghost btn-sm" id="theme-toggle-btn" aria-label="Toggle Dark Mode">
+          🌙 Dark
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="window.carebridge.toggleChatWidget()">
+          💬 AI Assistant
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- 3. Hero Section -->
+    <section class="hero" id="hero">
+      <div class="container hero-grid">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span>✨ Palghar • Boisar • Vasai • Nalasopara</span>
+          </div>
+          <h1 class="hero-title">
+            Compassionate Care, <br>
+            <span class="gradient-text">Connected Across Locations.</span>
+          </h1>
+          <p class="hero-lead">
+            Welcome to CareBridge Health Network. We provide accessible healthcare services, specialized outpatient care, and advanced diagnostics across Palghar District.
+          </p>
+
+          <div class="hero-actions">
+            <button class="btn btn-primary btn-lg" onclick="window.carebridge.toggleChatWidget()">
+              <svg class="icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              Chat with AI Assistant
+            </button>
+            <a href="#booking-portal" class="btn btn-outline btn-lg">
+              Request Appointment Online
+            </a>
+          </div>
+
+          <div class="hero-features">
+            <div class="hero-feature-item">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              <span>4 Modern Centers</span>
+            </div>
+            <div class="hero-feature-item">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"></path></svg>
+              <span>Extended OPD Hours</span>
+            </div>
+            <div class="hero-feature-item">
+              <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              <span>Specialist Consultations</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero Assistant Card -->
+        <div class="hero-assistant-preview">
+          <div class="assistant-card-header">
+            <div class="assistant-card-identity">
+              <div class="bot-avatar">🤖</div>
+              <div>
+                <strong>CareBridge AI Assistant</strong>
+                <div class="assistant-status-text">
+                  <span class="live-pulse"></span> Online & Ready to Help
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-chat-body">
+            <p class="preview-message">
+              "Hi! I can help you find clinic locations, check opening hours, learn about appointment procedures, or request an appointment."
+            </p>
+            <div class="preview-prompt-chips">
+              <button class="preview-chip-btn" onclick="window.carebridge.toggleChatWidget(); window.carebridge.handleChatChip('start_booking_new')">
+                <span>➕ I am a New Patient (Book Visit)</span>
+                <span>→</span>
+              </button>
+              <button class="preview-chip-btn" onclick="window.carebridge.toggleChatWidget(); window.carebridge.handleChatChip('loc_boisar')">
+                <span>📍 Boisar Care Center Hours & Info</span>
+                <span>→</span>
+              </button>
+              <button class="preview-chip-btn" onclick="window.carebridge.toggleChatWidget(); window.carebridge.handleChatChip('existing_patient_info')">
+                <span>🔄 Reschedule or Cancel (Existing Patient)</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+
+          <p class="form-notice" style="margin: 0; font-size: 0.75rem; text-align: center;">
+            🛡️ Administrative guide only. The assistant does not provide medical diagnosis.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Mandatory Safety Disclaimer Notice -->
+    <div class="container">
+      <div class="safety-disclaimer-bar">
+        <span class="safety-badge">Patient Safety Notice</span>
+        <p>
+          CareBridge Health Network is a demonstration multi-location provider. Our AI Patient Assistant is an administrative tool designed to guide you on clinic services, locations, and request scheduling. <strong>The AI assistant is NOT a doctor and does not provide medical diagnosis, treatment advice, or prescriptions.</strong>
+        </p>
+      </div>
+    </div>
+
+    <!-- 5. Locations & Clinic Hours Section -->
+    <section class="section" id="locations">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-subtitle">Network Coverage</span>
+          <h2 class="section-title">Our Clinic Locations & Operating Hours</h2>
+          <p class="section-desc">
+            Find the nearest CareBridge center in Palghar, Boisar, Vasai, or Nalasopara with live status indicators.
+          </p>
+        </div>
+
+        <div class="locations-grid" id="locations-grid">
+          <!-- Populated by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Healthcare Services Showcase -->
+    <section class="section" id="services" style="background: var(--bg-subtle);">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-subtitle">Comprehensive Healthcare</span>
+          <h2 class="section-title">Clinical Specialties & Services</h2>
+          <p class="section-desc">
+            From routine general medicine to advanced cardiology, neurology, and pediatrics.
+          </p>
+        </div>
+
+        <div class="services-grid" id="services-grid">
+          <!-- Populated by app.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Interactive Appointment Request Portal & Tracker -->
+    <section class="section booking-section" id="booking-portal">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-subtitle">Easy Scheduling</span>
+          <h2 class="section-title">Submit an Appointment Request</h2>
+          <p class="section-desc">
+            Submit your visit request online. Our clinic team will verify scheduling availability and contact you directly to confirm.
+          </p>
+        </div>
+
+        <div class="portal-grid">
+          <!-- Booking Form -->
+          <div class="portal-card">
+            <div class="portal-card-header">
+              <h3>Appointment Request Form</h3>
+              <p class="text-muted" style="font-size: 0.88rem;">All fields are required to queue your request with the clinic coordinator.</p>
+            </div>
+
+            <form id="appointment-form">
+              <!-- Patient Type -->
+              <div class="form-group">
+                <label>Patient Category *</label>
+                <div class="radio-pill-group">
+                  <label class="radio-pill-label">
+                    <input type="radio" name="patientType" value="New Patient" checked>
+                    <span>New Patient</span>
+                  </label>
+                  <label class="radio-pill-label">
+                    <input type="radio" name="patientType" value="Existing Patient">
+                    <span>Existing Patient</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Full Name -->
+              <div class="form-group">
+                <label for="form-name">Patient Full Name *</label>
+                <input type="text" id="form-name" class="form-control" placeholder="e.g. Rajesh Kumar" required>
+              </div>
+
+              <!-- Phone & Email -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="form-phone">Phone Number *</label>
+                  <input type="tel" id="form-phone" class="form-control" placeholder="+91 98765 43210" required>
+                </div>
+                <div class="form-group">
+                  <label for="form-email">Email Address *</label>
+                  <input type="email" id="form-email" class="form-control" placeholder="patient@example.com" required>
+                </div>
+              </div>
+
+              <!-- Preferred Location & Service -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="form-location">Preferred Location *</label>
+                  <select id="form-location" class="form-control" required>
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="form-service">Requested Service *</label>
+                  <select id="form-service" class="form-control" required>
+                    <!-- Populated dynamically -->
+                  </select>
+                </div>
+              </div>
+
+              <!-- Date & Time Slot -->
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="form-date">Preferred Date *</label>
+                  <input type="date" id="form-date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label for="form-time">Preferred Time Slot *</label>
+                  <select id="form-time" class="form-control" required>
+                    <option value="">-- Select Time Slot --</option>
+                    <option value="Morning (9:00 AM - 12:00 PM)">Morning (9:00 AM - 12:00 PM)</option>
+                    <option value="Afternoon (12:00 PM - 4:00 PM)">Afternoon (12:00 PM - 4:00 PM)</option>
+                    <option value="Evening (4:00 PM - 8:00 PM)">Evening (4:00 PM - 8:00 PM)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="form-notes">Administrative Notes (Optional)</label>
+                <input type="text" id="form-notes" class="form-control" placeholder="Any preferred doctor or visit notes (no sensitive records)">
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">
+                Submit Appointment Request
+              </button>
+
+              <p class="form-notice">
+                ⚠️ <strong>Important Disclosure:</strong> Submitting this form sends an appointment <em>request</em>. The assistant and website do not claim confirmed bookings until our clinic scheduling team reviews calendar availability and calls you.
+              </p>
+            </form>
+          </div>
+
+          <!-- Existing Patient Self-Service Tracker -->
+          <div class="tracker-box" id="tracker-section">
+            <div class="portal-card-header">
+              <span class="badge-subtle">Existing Patients</span>
+              <h3>Manage & Track Requests</h3>
+              <p class="text-muted" style="font-size: 0.88rem;">Search by your phone number or Request ID (e.g. <code>CB-849201</code>) to track status, request a reschedule, or cancel.</p>
+            </div>
+
+            <div class="search-input-group">
+              <input type="text" id="tracker-query" class="form-control" placeholder="Enter Phone Number or Request ID">
+              <button class="btn btn-primary" id="tracker-search-btn">Search</button>
+            </div>
+
+            <div class="tracker-results" id="tracker-results">
+              <p class="text-muted text-center" style="font-size: 0.9rem; padding: 20px;">
+                Enter your phone or Request ID above to search active requests.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Searchable FAQ & Policy Knowledge Hub -->
+    <section class="section" id="faq">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-subtitle">Knowledge Hub</span>
+          <h2 class="section-title">Frequently Asked Questions</h2>
+          <p class="section-desc">
+            Answers regarding walk-in visits, doctor availability, cancellations, insurance, and medical safety policies.
+          </p>
+        </div>
+
+        <div class="faq-search-box">
+          <input type="text" id="faq-search-input" class="form-control" placeholder="🔍 Search questions (e.g. walk-ins, doctors, insurance, cancel)...">
+        </div>
+
+        <div class="faq-accordion" id="faq-accordion">
+          <!-- Populated by app.js -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 9. Footer -->
+  <footer class="footer" role="contentinfo">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="brand">
+            <div class="brand-logo-icon">➕</div>
+            <span class="brand-name">CareBridge Health</span>
+          </div>
+          <p>
+            A fictional multi-location healthcare provider created for demonstration purposes, serving Palghar, Boisar, Vasai, and Nalasopara.
+          </p>
+          <div style="font-size: 0.85rem; color: var(--text-secondary);">
+            <strong>Patient Support Hotline:</strong> <a href="tel:912240001000">+91 22 4000 1000</a><br>
+            <strong>Support Email:</strong> <a href="mailto:support@carebridge-demo.in">support@carebridge-demo.in</a>
+          </div>
+        </div>
+
+        <div class="footer-col">
+          <h4>Locations</h4>
+          <ul>
+            <li><a href="#locations">Palghar Central</a></li>
+            <li><a href="#locations">Boisar Care Center</a></li>
+            <li><a href="#locations">Vasai Care Center</a></li>
+            <li><a href="#locations">Nalasopara Care Center</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Specialties</h4>
+          <ul>
+            <li><a href="#services">General Medicine</a></li>
+            <li><a href="#services">Cardiology & Diagnostics</a></li>
+            <li><a href="#services">Neurology Consultations</a></li>
+            <li><a href="#services">Pediatrics & Women's Health</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Patient Safety</h4>
+          <ul>
+            <li><a href="#faq">AI Assistant Scope</a></li>
+            <li><a href="#faq">Emergency Procedures</a></li>
+            <li><a href="#faq">Insurance Disclaimers</a></li>
+            <li><a href="#faq">Transparent Pricing</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <p>© 2026 CareBridge Health Network (Demonstration System). All rights reserved.</p>
+        <p>Medical Emergency Hotline: <strong>108</strong> | Clinic Support: <strong>+91 22 4000 1000</strong></p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- 10. Floating AI Assistant Widget -->
+  <div class="floating-chat-container" id="floating-chat-container" role="dialog" aria-label="CareBridge AI Patient Assistant">
+    <div class="chat-header">
+      <div class="chat-header-info">
+        <div class="bot-avatar" style="width: 32px; height: 32px; font-size: 1.1rem;">🤖</div>
+        <div>
+          <div class="chat-header-title">CareBridge AI Assistant</div>
+          <div class="chat-header-subtitle">Administrative & Clinic Guide</div>
+        </div>
+      </div>
+      <div class="chat-header-actions">
+        <button class="chat-header-btn" id="chat-voice-toggle" title="Toggle Voice Output" aria-label="Voice Output" type="button">
+          🔊
+        </button>
+        <button class="chat-header-btn" id="close-chat-btn" title="Close Chat" aria-label="Close Chat" type="button">
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <div class="chat-messages-container" id="chat-messages">
+      <!-- Populated by ai-assistant.js -->
+    </div>
+
+    <div class="chat-input-container">
+      <input type="text" id="chat-input" class="chat-input" placeholder="Type a question or 'Book appointment'..." aria-label="Chat input">
+      <button class="btn btn-primary btn-sm" id="chat-send-btn" aria-label="Send message">
+        Send
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating Launcher Button -->
+  <button class="floating-trigger-btn" id="floating-chat-trigger" aria-label="Open AI Patient Assistant">
+    <span>💬</span>
+    <span>Ask AI Assistant</span>
+  </button>
+
+  <!-- 11. Modals -->
+  <!-- Booking Form Modal (Triggered by Service or Location cards) -->
+  <div class="modal-backdrop" id="booking-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Quick Appointment Request</h3>
+        <button class="btn btn-ghost btn-sm" onclick="window.carebridge.closeBookingModal()">✕</button>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 16px;">
+        To request an appointment at CareBridge, you can also use our online assistant or fill out the booking form on this page.
+      </p>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-primary" onclick="window.carebridge.closeBookingModal(); window.carebridge.toggleChatWidget(); window.carebridge.handleChatChip('start_booking')">
+          Use Guided AI Assistant
+        </button>
+        <a href="#booking-portal" class="btn btn-outline" onclick="window.carebridge.closeBookingModal()">
+          Go to Booking Form
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submission Receipt Modal -->
+  <div class="modal-backdrop" id="receipt-modal">
+    <div class="modal-card" id="receipt-modal-content">
+      <!-- Populated dynamically by app.js -->
+    </div>
+  </div>
+
+  <!-- Script initialization -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
